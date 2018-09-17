@@ -13,6 +13,7 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 
+
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import logging
 

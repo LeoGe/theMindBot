@@ -16,13 +16,14 @@ bot.
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import logging
+from game import Game
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
+games = {}
 
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
@@ -46,7 +47,7 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 def go(bot, update):
-    pass
+    games[update.message.chat_id] = Game(
 
 def rules(bot, update):
     string = "The game works as follows: I will give you each a random number between 1 and 100. Now you have to write the numbers in the group in the right order without communicating in any way. If you don't you will loose one life. You can pause the game with /pause and then for example agree on using a throwing star, which will releave you of your lowest number. Resume the game with /resume ( Everyone has to write that to resume the game). If you succeed you will get more numbers according to your increasing abilities.\n Good Luck" 

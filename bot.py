@@ -13,8 +13,8 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 
-
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 import logging
 from game import Game
 
@@ -47,7 +47,22 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 def go(bot, update):
-    games[update.message.chat_id] = Game(
+    nr_players = update.message.chat.get_members_count() - 1
+    games[update.message.chat_id] = Game(nr_players)
+
+    keyboard = [[InlineKeyboardButton("1", callback_data='1'),
+                 InlineKeyboardButton("2", callback_data='2')],
+                [InlineKeyboardButton("3", callback_data='3')]]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+
+def button(bot, update):
+    query = update.callback_query
+
+    bot.edit_message_text(text="Selected option: {}".format(query.data),chat_id=query.message.chat_id, message_id=query.message.message_id)
+
 
 def rules(bot, update):
     string = "The game works as follows: I will give you each a random number between 1 and 100. Now you have to write the numbers in the group in the right order without communicating in any way. If you don't you will loose one life. You can pause the game with /pause and then for example agree on using a throwing star, which will releave you of your lowest number. Resume the game with /resume ( Everyone has to write that to resume the game). If you succeed you will get more numbers according to your increasing abilities.\n Good Luck" 
@@ -66,6 +81,7 @@ def main():
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("go", go))
     dp.add_handler(CommandHandler("rules",rules))
+    dp.add_handler(CallbackQueryHandler(button))
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, echo))

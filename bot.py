@@ -15,6 +15,7 @@ bot.
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
+from telegram.error import TelegramError
 import logging
 from game import Game
 
@@ -45,24 +46,39 @@ def echo(bot, update):
 def error(bot, update, error):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
+    
 
 def go(bot, update):
+    chat_id = update.message.chat_id
     nr_players = update.message.chat.get_members_count() - 1
-    games[update.message.chat_id] = Game(nr_players)
+    games[chat_id] = Game(nr_players)
+    players = update.message.chat.get_administrators()
+    print(len(players))
+    if len(players) != nr_players + 1:
+        bot.send_message(update.message.chat_id, "Please turn off the setting in the group that everybody is automatically an admin and set everyoe as admin maually so I can reach you.")
+    for player in players:
+        print(player.user)
+        if not player.user.is_bot:
+            games[chat_id].player_to_numbers[player.user.id]=[]
+    games[chat_id].draw()
+    #bot.send_message(players[2].user.id,str(games[chat_id].player_to_numbers[players[2].user.id]))
+    try:
 
-    keyboard = [[InlineKeyboardButton("1", callback_data='1'),
-                 InlineKeyboardButton("2", callback_data='2')],
-                [InlineKeyboardButton("3", callback_data='3')]]
+        for player in games[chat_id].player_to_numbers:
+            message = "Your numbers are:\n " + str(games[chat_id].player_to_numbers[player])
+            bot.send_message(player, message)
+    except TelegramError:
+        update.message.reply_text("There is a small problem with that. At least one person in this group has not messaged me personally. Unfortunately I am under a curse, so you have to contact me first before I can contact you. So please say hello to me and try again and I will give you your destined numbers. And to everyboday else: Please forget everything I have already sent you.")
+        del games[chat_id]
+        return
+    bot.send_message(update.message.chat_id, "I have sent everyone of you your numbers. If you are ready please write /ok and I will start the gane")
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    update.message.reply_text('Please choose:', reply_markup=reply_markup)
-
-def button(bot, update):
-    query = update.callback_query
-
-    bot.edit_message_text(text="Selected option: {}".format(query.data),chat_id=query.message.chat_id, message_id=query.message.message_id)
-
+def ok(bot, update):
+    if not games[chat_id]:
+        bot.send_message(update.message.chat_id, "Please initialise the game first with /go")
+        return
+    player_id = update.message.from_user    
+    
 
 def rules(bot, update):
     string = "The game works as follows: I will give you each a random number between 1 and 100. Now you have to write the numbers in the group in the right order without communicating in any way. If you don't you will loose one life. You can pause the game with /pause and then for example agree on using a throwing star, which will releave you of your lowest number. Resume the game with /resume ( Everyone has to write that to resume the game). If you succeed you will get more numbers according to your increasing abilities.\n Good Luck" 
@@ -70,6 +86,7 @@ def rules(bot, update):
 
 def main():
     """Start the bot."""
+    print("...running...")
     # Create the EventHandler and pass it your bot's token.
     updater = Updater("673160118:AAEkXqLr84VzRuhSnRRwCP6X0NBnpBEp5bI")
 
@@ -81,7 +98,6 @@ def main():
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("go", go))
     dp.add_handler(CommandHandler("rules",rules))
-    dp.add_handler(CallbackQueryHandler(button))
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, echo))

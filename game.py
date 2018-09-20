@@ -1,9 +1,11 @@
 # class to remember everything about the running game and keep the bot cleaner
+# there is no error handling in here. Nor does this class implement a lot of rules. More a way to save the status of the game
 from random import sample
 
 class Game():
     def __init__(self, number_players):
         self.number_players = number_players
+        self.active_players = []
         self.lives = 4
         self.throw_stars = 1
         self.level = 1

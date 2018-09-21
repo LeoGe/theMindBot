@@ -30,7 +30,18 @@ def help(bot, update):
 
 def move(bot, update):
     if active:
-        update.message.reply_text(update.message.text)
+        player_id = update.message.user_from.id
+        chat_id = update.message.chat_id
+        message = update.message.text
+        numbers = games[chat_id].player_to_numbers[player_id]
+        
+        message = int(message)
+        if message not in numbers:
+            bot.send_message(chat_id,"That was not a valid move! Now you have to start the game again with /ok")
+            active = False
+            games[chat_id].active_players = []
+            return
+
 
 
 def error(bot, update, error):
@@ -65,7 +76,7 @@ def go(bot, update):
 
 def ok(bot, update):
     chat_id = update.message.chat_id
-    if (chat_id not in games) or (not games[chat_id]):
+    if chat_id not in games
         bot.send_message(update.message.chat_id, "Please initialise the game first with /go")
         return
     player_id = update.message.from_user.id
@@ -75,6 +86,7 @@ def ok(bot, update):
         print(games[chat_id].active_players)
         print(games[chat_id].nr_players)
     if len(games[chat_id].active_players) == games[chat_id].nr_players:
+        #this might give me some problems if more than one game is running at the same time :D
         bot.send_message(chat_id, "I see you are all ready.")
         time.sleep(1)
         bot.send_message(chat_id,"3")
@@ -85,6 +97,19 @@ def ok(bot, update):
         time.sleep(1)
         bot.send_message(chat_id,"GO!")
         active = True
+
+def stop(bot, update):
+    player_id = update.message.from_user.id
+    chat_id = update.message.chat_id
+    if chat_id not in games:
+        bot.send_message(chat_id, "Please start the game first with /go")
+        return
+    if player_id in games[chat_id].active_players:
+        games[chat_id].active_players.remove(player_id)
+    if len(games[chat_id].active_players) == 0:
+        bot.send_message(chat_id,"I stopped the game. What do you want to do next? Use a Throwstar (/throwstar). I will start the game again when everyone has sent /ok")
+        active = False
+
     
 
 def rules(bot, update):

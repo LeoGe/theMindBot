@@ -1,23 +1,9 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""Simple Bot to reply to Telegram messages.
-This program is dedicated to the public domain under the CC0 license.
-This Bot uses the Updater class to handle the bot.
-First, a few handler functions are defined. Then, those functions are passed to
-the Dispatcher and registered at their respective places.
-Then, the bot is started and runs until we press Ctrl-C on the command line.
-Usage:
-Basic Echobot example, repeats messages.
-Press Ctrl-C on the command line or send a signal to the process to stop the
-bot.
-"""
-
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 from telegram.error import TelegramError
 import logging
 from game import Game
+import time
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -27,6 +13,8 @@ logger = logging.getLogger(__name__)
 games = {}
 with open('key.txt', 'r') as key_file:
     key=key_file.read().replace('\n', '')
+
+active = False
 
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
@@ -40,9 +28,9 @@ def help(bot, update):
     update.message.reply_text('You can of course always communicate with me telepathically. Should that not work use these easy commands:\n /help - show this message\n /go - start a new game \n /rules - I will explain the game for all of you that cannot open their third eye yet.')
 
 
-def echo(bot, update):
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
+def move(bot, update):
+    if active:
+        update.message.reply_text(update.message.text)
 
 
 def error(bot, update, error):
@@ -76,10 +64,27 @@ def go(bot, update):
     bot.send_message(update.message.chat_id, "I have sent everyone of you your numbers. If you are ready please write /ok and I will start the gane")
 
 def ok(bot, update):
-    if not games[chat_id]:
+    chat_id = update.message.chat_id
+    if (chat_id not in games) or (not games[chat_id]):
         bot.send_message(update.message.chat_id, "Please initialise the game first with /go")
         return
-    player_id = update.message.from_user    
+    player_id = update.message.from_user.id
+    
+    if player_id not in games[chat_id].active_players:
+        games[chat_id].active_players.append(player_id)
+        print(games[chat_id].active_players)
+        print(games[chat_id].nr_players)
+    if len(games[chat_id].active_players) == games[chat_id].nr_players:
+        bot.send_message(chat_id, "I see you are all ready.")
+        time.sleep(1)
+        bot.send_message(chat_id,"3")
+        time.sleep(1)
+        bot.send_message(chat_id, "2")
+        time.sleep(1)
+        bot.send_message(chat_id,"1")
+        time.sleep(1)
+        bot.send_message(chat_id,"GO!")
+        active = True
     
 
 def rules(bot, update):
@@ -100,9 +105,10 @@ def main():
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("go", go))
     dp.add_handler(CommandHandler("rules",rules))
+    dp.add_handler(CommandHandler("ok",ok))
 
     # on noncommand i.e message - echo the message on Telegram
-    dp.add_handler(MessageHandler(Filters.text, echo))
+    dp.add_handler(MessageHandler(Filters.text, move))
 
     # log all errors
     dp.add_error_handler(error)

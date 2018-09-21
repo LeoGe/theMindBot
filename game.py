@@ -4,7 +4,7 @@ from random import sample
 
 class Game():
     def __init__(self, number_players):
-        self.number_players = number_players
+        self.nr_players = number_players
         self.active_players = []
         self.lives = 4
         self.throw_stars = 1
@@ -22,8 +22,7 @@ class Game():
                 self.player_to_numbers[player_id].remove(min_number)
 
     def draw(self):
-        nr_players = len(self.player_to_numbers)
-        rand_arr = sample(range(100), self.level * nr_players)
+        rand_arr = sample(range(100), self.level * self.nr_players)
         i = 0
         for player_id in self.player_to_numbers:
             self.player_to_numbers[player_id] = rand_arr[i*self.level:(i+1)*self.level]

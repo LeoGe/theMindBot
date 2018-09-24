@@ -30,20 +30,19 @@ class Game():
 
 
     def check_move(self, new_number, player_id):
-        if new_number in self.player_to_numbers[player_id]:
-            self.player_to_numbers[player_id].remove(new_number)
-            self.last_number = new_number
-            smaller_numbers = {}
-            for player_cnt in self.player_to_numbers:
-                temp = [x for x in self.player_to_numbers[player_cnt] if x < self.last_number]
-                if temp:
-                    smaller_numbers[player_cnt] = temp
-            if len(smaller_numbers) > 0:
-                self.lives = self.lives -1
-                print("Fail")
-                return smaller_numbers
-            print("Success")
-        else:
-            print("This is not your number")
-
+        self.player_to_numbers[player_id].remove(new_number)
+        self.last_number = new_number
+        smaller_numbers = {}
+        for player_cnt in self.player_to_numbers:
+            temp = [x for x in self.player_to_numbers[player_cnt] if x < self.last_number]
+            if temp:
+                smaller_numbers[player_cnt] = temp
+                for num in temp:
+                    self.player_to_numbers[player_cnt].remove(num)
+        if len(smaller_numbers) > 0:
+            self.lives = self.lives -1
+            print("Fail")
+            return smaller_numbers
+        print("Success")
+        return 0
 

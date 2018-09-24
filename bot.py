@@ -29,8 +29,11 @@ def help(bot, update):
 
 
 def move(bot, update):
+    global active
+    print(active)
     if active:
-        player_id = update.message.user_from.id
+        print(update.message)
+        player_id = update.message.from_user.id
         chat_id = update.message.chat_id
         message = update.message.text
         numbers = games[chat_id].player_to_numbers[player_id]
@@ -41,6 +44,37 @@ def move(bot, update):
             active = False
             games[chat_id].active_players = []
             return
+        smaller_numbers = games[chat_id].check_move(message, player_id)
+        if smaller_numbers != 0:
+            bot.send_message(chat_id, "Oh no! You have lost a live!")
+            if games[chat_id].lives < 0:
+                bot.send_message(chat_id, "Ups, you lost the game. You have no lifes left.\n You can start a new game with /go")
+                del games[chat_id]
+                active = False
+                return
+            if games.lives == 0:
+                bot.send_message(chat_id, "Careful! You are swimming now")
+            for player_cnt in smaller_numbers:
+                user = bot.get_chat_member(chat_id, player_cnt)
+                smaller_numbers_tmp = smaller_numbers[player_cnt]
+                if len(smaller_numbers_tmp) == 1:
+                    word = number
+                else:
+                    word = numbers
+                string = "I am afraid " + str(user.first_name)+" still has the "+word+" "+str(smaller_numbers_tmp)
+                bot.send_message(chat_id, string)
+            active = False
+            games[chat_id].active_players = []
+
+def status(bot, update):
+    chat_id = update.message.chat_id
+    string = "Here is your current game status: You have...\n... "
+    string += str(games[chat_id].lives)
+    string += " lives left.\n... "
+    string += str(games[chat_id].throw_stars)
+    string += " throw stars left."
+    #string = "Here is your current game status: You have...\n... " + str(games[chat_id].lives) +" lives left \n ... "+str(games[chat_id].throw_stars)" throw stars left"
+    bot.send_message(update.message.chat_id, string)
 
 
 
@@ -54,11 +88,11 @@ def go(bot, update):
     nr_players = update.message.chat.get_members_count() - 1
     games[chat_id] = Game(nr_players)
     players = update.message.chat.get_administrators()
-    print(len(players))
+    #print(len(players))
     if len(players) != nr_players + 1:
         bot.send_message(update.message.chat_id, "Please turn off the setting in the group that everybody is automatically an admin and set everyoe as admin maually so I can reach you.")
     for player in players:
-        print(player.user)
+        #print(player.user)
         if not player.user.is_bot:
             games[chat_id].player_to_numbers[player.user.id]=[]
     games[chat_id].draw()
@@ -76,26 +110,27 @@ def go(bot, update):
 
 def ok(bot, update):
     chat_id = update.message.chat_id
-    if chat_id not in games
+    if chat_id not in games:
         bot.send_message(update.message.chat_id, "Please initialise the game first with /go")
         return
     player_id = update.message.from_user.id
     
     if player_id not in games[chat_id].active_players:
         games[chat_id].active_players.append(player_id)
-        print(games[chat_id].active_players)
-        print(games[chat_id].nr_players)
+        #print(games[chat_id].active_players)
+        #print(games[chat_id].nr_players)
     if len(games[chat_id].active_players) == games[chat_id].nr_players:
         #this might give me some problems if more than one game is running at the same time :D
         bot.send_message(chat_id, "I see you are all ready.")
-        time.sleep(1)
+        #time.sleep(1)
         bot.send_message(chat_id,"3")
-        time.sleep(1)
+        #time.sleep(1)
         bot.send_message(chat_id, "2")
-        time.sleep(1)
+        #time.sleep(1)
         bot.send_message(chat_id,"1")
-        time.sleep(1)
+        #time.sleep(1)
         bot.send_message(chat_id,"GO!")
+        global active
         active = True
 
 def stop(bot, update):
@@ -131,6 +166,7 @@ def main():
     dp.add_handler(CommandHandler("go", go))
     dp.add_handler(CommandHandler("rules",rules))
     dp.add_handler(CommandHandler("ok",ok))
+    dp.add_handler(CommandHandler("status", status))
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, move))

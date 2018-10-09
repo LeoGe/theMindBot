@@ -29,12 +29,14 @@ def help(bot, update):
 
 
 def move(bot, update):
+    chat_id = update.message.chat_id
+    if chat_id not in games:
+        return
     global active
     print(active)
     if active:
         print(update.message)
         player_id = update.message.from_user.id
-        chat_id = update.message.chat_id
         message = update.message.text
         numbers = games[chat_id].player_to_numbers[player_id]
         
@@ -68,14 +70,16 @@ def move(bot, update):
 
 def status(bot, update):
     chat_id = update.message.chat_id
-    string = "Here is your current game status: You have...\n... "
-    string += str(games[chat_id].lives)
-    string += " lives left.\n... "
-    string += str(games[chat_id].throw_stars)
-    string += " throw stars left."
+    if chat_id in games:
+        string = "Here is your current game status: You have...\n... "
+        string += str(games[chat_id].lives)
+        string += " lives left.\n... "
+        string += str(games[chat_id].throw_stars)
+        string += " throw stars left."
     #string = "Here is your current game status: You have...\n... " + str(games[chat_id].lives) +" lives left \n ... "+str(games[chat_id].throw_stars)" throw stars left"
-    bot.send_message(update.message.chat_id, string)
-
+        bot.send_message(update.message.chat_id, string)
+    else:
+        bot.send_message(chat_id,"There is currently no game running. You can start it with /go")
 
 
 def error(bot, update, error):
@@ -86,6 +90,9 @@ def error(bot, update, error):
 def go(bot, update):
     chat_id = update.message.chat_id
     nr_players = update.message.chat.get_members_count() - 1
+    if chat_id in games:
+        bot.send_message(chat_id, "There is already a game for this chat. If you want to abort the game use /instantDeath")
+        return
     games[chat_id] = Game(nr_players)
     players = update.message.chat.get_administrators()
     #print(len(players))
@@ -119,19 +126,19 @@ def ok(bot, update):
         games[chat_id].active_players.append(player_id)
         #print(games[chat_id].active_players)
         #print(games[chat_id].nr_players)
-    if len(games[chat_id].active_players) == games[chat_id].nr_players:
+        if len(games[chat_id].active_players) == games[chat_id].nr_players:
         #this might give me some problems if more than one game is running at the same time :D
-        bot.send_message(chat_id, "I see you are all ready.")
+            bot.send_message(chat_id, "I see you are all ready.")
         #time.sleep(1)
-        bot.send_message(chat_id,"3")
+            bot.send_message(chat_id,"3")
         #time.sleep(1)
-        bot.send_message(chat_id, "2")
+            bot.send_message(chat_id, "2")
         #time.sleep(1)
-        bot.send_message(chat_id,"1")
+            bot.send_message(chat_id,"1")
         #time.sleep(1)
-        bot.send_message(chat_id,"GO!")
-        global active
-        active = True
+            bot.send_message(chat_id,"GO!")
+            global active
+            active = True
 
 def stop(bot, update):
     player_id = update.message.from_user.id
@@ -139,16 +146,16 @@ def stop(bot, update):
     if chat_id not in games:
         bot.send_message(chat_id, "Please start the game first with /go")
         return
-    if player_id in games[chat_id].active_players:
-        games[chat_id].active_players.remove(player_id)
-    if len(games[chat_id].active_players) == 0:
-        bot.send_message(chat_id,"I stopped the game. What do you want to do next? Use a Throwstar (/throwstar). I will start the game again when everyone has sent /ok")
-        active = False
-
+    if len(games[chat_id].active_players) < games[chat_id].nr_players:
+        bot.send_message(chat_id, "The game is not currently running. Restart ist by typing /ok")
+        return
+    bot.send_message(chat_id,"I stopped the game. What do you want to do next? Use a Throwstar (/throwstar). I will start the game again when everyone has sent /ok")
+    active = False
+    games[chat_id].active_players = []
     
 
 def rules(bot, update):
-    string = "The game works as follows: I will give you each a random number between 1 and 100. Now you have to write the numbers in the group in the right order without communicating in any way. If you don't you will loose one life. You can pause the game with /pause and then for example agree on using a throwing star, which will releave you of your lowest number. Resume the game with /resume ( Everyone has to write that to resume the game). If you succeed you will get more numbers according to your increasing abilities.\n Good Luck" 
+    string = "The game works as follows: I will give you each a random number between 1 and 100. Now you have to write the numbers in the group in the right order without communicating in any way. If you don't you will loose one life. You can pause the game with /stop and then for example agree on using a throwing star, which will releave you of your lowest number. Resume the game with /ok ( Everyone has to write that to resume the game). If you succeed you will get more numbers according to your increasing abilities.\n Good Luck" 
     update.message.reply_text(string)
 
 def main():
@@ -167,6 +174,7 @@ def main():
     dp.add_handler(CommandHandler("rules",rules))
     dp.add_handler(CommandHandler("ok",ok))
     dp.add_handler(CommandHandler("status", status))
+    dp.add_handler(CommandHandler("stop", stop))
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, move))

@@ -35,7 +35,7 @@ def move(bot, update):
     global active
     print(active)
     if active:
-        print(update.message)
+        #print(update.message)
         player_id = update.message.from_user.id
         message = update.message.text
         numbers = games[chat_id].player_to_numbers[player_id]
@@ -46,6 +46,7 @@ def move(bot, update):
             active = False
             games[chat_id].active_players = []
             return
+
         smaller_numbers = games[chat_id].check_move(message, player_id)
         if smaller_numbers != 0:
             bot.send_message(chat_id, "Oh no! You have lost a live!")
@@ -54,19 +55,26 @@ def move(bot, update):
                 del games[chat_id]
                 active = False
                 return
-            if games.lives == 0:
+            if games[chat_id].lives == 0:
                 bot.send_message(chat_id, "Careful! You are swimming now")
+            
             for player_cnt in smaller_numbers:
-                user = bot.get_chat_member(chat_id, player_cnt)
+                user = bot.get_chat_member(chat_id, player_cnt).user
                 smaller_numbers_tmp = smaller_numbers[player_cnt]
                 if len(smaller_numbers_tmp) == 1:
-                    word = number
+                    word = "number"
                 else:
-                    word = numbers
-                string = "I am afraid " + str(user.first_name)+" still has the "+word+" "+str(smaller_numbers_tmp)
+                    word = "numbers"
+                print(user)
+                string = "I am afraid " + str(user.first_name)+" still had the "+word+" "+str(smaller_numbers_tmp)
                 bot.send_message(chat_id, string)
             active = False
             games[chat_id].active_players = []
+            return
+        if games[chat_id].no_nrs_left():
+            games[chat_id].level = games[chat_id].level+1
+            string = "You did it, you leveled up! You are now in level " + str(games[chat_id].level)+". You can start the next level with /go. Or kill the game with /instantDeath"
+            bot.send_message(chat_id, string)
 
 def status(bot, update):
     chat_id = update.message.chat_id
@@ -75,7 +83,9 @@ def status(bot, update):
         string += str(games[chat_id].lives)
         string += " lives left.\n... "
         string += str(games[chat_id].throw_stars)
-        string += " throw stars left."
+        string += " throw stars left.\n... reached level "
+        string += str(games[chat_id].level)
+
     #string = "Here is your current game status: You have...\n... " + str(games[chat_id].lives) +" lives left \n ... "+str(games[chat_id].throw_stars)" throw stars left"
         bot.send_message(update.message.chat_id, string)
     else:
@@ -90,18 +100,21 @@ def error(bot, update, error):
 def go(bot, update):
     chat_id = update.message.chat_id
     nr_players = update.message.chat.get_members_count() - 1
-    if chat_id in games:
-        bot.send_message(chat_id, "There is already a game for this chat. If you want to abort the game use /instantDeath")
-        return
-    games[chat_id] = Game(nr_players)
+    
+    if chat_id not in games:
+        games[chat_id] = Game(nr_players)
+    else:
+        games[chat_id].nr_players = nr_players
     players = update.message.chat.get_administrators()
     #print(len(players))
     if len(players) != nr_players + 1:
         bot.send_message(update.message.chat_id, "Please turn off the setting in the group that everybody is automatically an admin and set everyoe as admin maually so I can reach you.")
+    games[chat_id].player_to_numbers = {}    
     for player in players:
         #print(player.user)
         if not player.user.is_bot:
             games[chat_id].player_to_numbers[player.user.id]=[]
+    print("level: "+str(games[chat_id].level))
     games[chat_id].draw()
     #bot.send_message(players[2].user.id,str(games[chat_id].player_to_numbers[players[2].user.id]))
     try:
@@ -111,7 +124,8 @@ def go(bot, update):
             bot.send_message(player, message)
     except TelegramError:
         update.message.reply_text("There is a small problem with that. At least one person in this group has not messaged me personally. Unfortunately I am under a curse, so you have to contact me first before I can contact you. So please say hello to me and try again and I will give you your destined numbers. And to everyboday else: Please forget everything I have already sent you.")
-        del games[chat_id]
+        if games[chat_id].level == 1:
+            del games[chat_id]
         return
     bot.send_message(update.message.chat_id, "I have sent everyone of you your numbers. If you are ready please write /ok and I will start the gane")
 

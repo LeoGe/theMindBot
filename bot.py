@@ -19,21 +19,24 @@ active = False
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
 def start(bot, update):
+    print("comand: start")
     """Send a message when the command /start is issued."""
     update.message.reply_text('Good Evening Ladies and Gentlemen. My name is Harvey. I am your game master this evening. If you want to start a new game just use /go. But first syncronise your thoughts and find you qi. This journey will strain your phsycic abilities to the maximum.')
 
 
 def help(bot, update):
+    print("command: help")
     """Send a message when the command /help is issued."""
     update.message.reply_text('You can of course always communicate with me telepathically. Should that not work use these easy commands:\n /help - show this message\n /go - start a new game \n /rules - I will explain the game for all of you that cannot open their third eye yet.')
 
 
 def move(bot, update):
+    print("command: move")
     chat_id = update.message.chat_id
     if chat_id not in games:
         return
     global active
-    print(active)
+    #print(active)
     if active:
         #print(update.message)
         player_id = update.message.from_user.id
@@ -65,18 +68,20 @@ def move(bot, update):
                     word = "number"
                 else:
                     word = "numbers"
-                print(user)
+                #print(user)
                 string = "I am afraid " + str(user.first_name)+" still had the "+word+" "+str(smaller_numbers_tmp)
                 bot.send_message(chat_id, string)
             active = False
             games[chat_id].active_players = []
-            return
+            
         if games[chat_id].no_nrs_left():
             games[chat_id].level = games[chat_id].level+1
             string = "You did it, you leveled up! You are now in level " + str(games[chat_id].level)+". You can start the next level with /go. Or kill the game with /instantDeath"
+            active = False
             bot.send_message(chat_id, string)
 
 def status(bot, update):
+    print("command: status")
     chat_id = update.message.chat_id
     if chat_id in games:
         string = "Here is your current game status: You have...\n... "
@@ -98,12 +103,16 @@ def error(bot, update, error):
     
 
 def go(bot, update):
+    print("command: go")
     chat_id = update.message.chat_id
     nr_players = update.message.chat.get_members_count() - 1
-    
+    if active == True:
+        return
     if chat_id not in games:
         games[chat_id] = Game(nr_players)
     else:
+        if not games[chat_id].no_nrs_left():
+            return
         games[chat_id].nr_players = nr_players
     players = update.message.chat.get_administrators()
     #print(len(players))
@@ -114,7 +123,7 @@ def go(bot, update):
         #print(player.user)
         if not player.user.is_bot:
             games[chat_id].player_to_numbers[player.user.id]=[]
-    print("level: "+str(games[chat_id].level))
+    #print("level: "+str(games[chat_id].level))
     games[chat_id].draw()
     #bot.send_message(players[2].user.id,str(games[chat_id].player_to_numbers[players[2].user.id]))
     try:
@@ -129,7 +138,30 @@ def go(bot, update):
         return
     bot.send_message(update.message.chat_id, "I have sent everyone of you your numbers. If you are ready please write /ok and I will start the gane")
 
+def throwstar(bot, update):
+    chat_id = update.message.chat_id
+    if chat_id not in games:
+        bot.send_message(chat_id, "Can't use a throwstar without playing the game. Sorry")
+        return
+    if active:
+        bot.send_message("Please stop the game first and agree on using the throwstar.")
+        return
+    throw_away= games[chat_id].use_throwstar()
+    
+    for player_cnt in throw_away:
+        user = bot.get_chat_member(chat_id, player_cnt).user
+        string = str(user.first_name)+" has lost the number "+str(throw_away[player_cnt])
+        bot.send_message(chat_id, string)
+    if games[chat_id].no_nrs_left():
+        games[chat_id].level = games[chat_id].level+1
+        string = "You did it, you leveled up! You are now in level " + str(games[chat_id].level)+". You can start the next level with /go. Or kill the game with /instantDeath"
+        active = False
+        bot.send_message(chat_id, string)
+
+
+
 def ok(bot, update):
+    print("command: ok")
     chat_id = update.message.chat_id
     if chat_id not in games:
         bot.send_message(update.message.chat_id, "Please initialise the game first with /go")
@@ -142,19 +174,20 @@ def ok(bot, update):
         #print(games[chat_id].nr_players)
         if len(games[chat_id].active_players) == games[chat_id].nr_players:
         #this might give me some problems if more than one game is running at the same time :D
-            bot.send_message(chat_id, "I see you are all ready.")
+            bot.send_message(chat_id, "I see you are all ready.\n 3...\n 2...\n 1...")
         #time.sleep(1)
-            bot.send_message(chat_id,"3")
+            #bot.send_message(chat_id,"3")
         #time.sleep(1)
-            bot.send_message(chat_id, "2")
+            #bot.send_message(chat_id, "2")
         #time.sleep(1)
-            bot.send_message(chat_id,"1")
+            #bot.send_message(chat_id,"1")
         #time.sleep(1)
             bot.send_message(chat_id,"GO!")
             global active
             active = True
 
 def stop(bot, update):
+    print("command: stop")
     player_id = update.message.from_user.id
     chat_id = update.message.chat_id
     if chat_id not in games:
@@ -169,6 +202,7 @@ def stop(bot, update):
     
 
 def rules(bot, update):
+    print("command: rules")
     string = "The game works as follows: I will give you each a random number between 1 and 100. Now you have to write the numbers in the group in the right order without communicating in any way. If you don't you will loose one life. You can pause the game with /stop and then for example agree on using a throwing star, which will releave you of your lowest number. Resume the game with /ok ( Everyone has to write that to resume the game). If you succeed you will get more numbers according to your increasing abilities.\n Good Luck" 
     update.message.reply_text(string)
 

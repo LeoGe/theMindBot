@@ -15,13 +15,13 @@ class Game():
 
     def no_nrs_left(self):
         for player in self.player_to_numbers:
-            print("No numbers left test")
-            print(self.player_to_numbers[player])
+            #print("No numbers left test")
+            #print(self.player_to_numbers[player])
             if self.player_to_numbers[player] != []:
                 return False
         return True
 
-    def use_throw_stars(self):
+    def use_throwstar(self):
         throw_away = {}
         for player_id in self.player_to_numbers:
             if len(self.player_to_numbers[player_id])>0:
@@ -29,10 +29,12 @@ class Game():
                 throw_away[player_id] = min_number
                 self.player_to_numbers[player_id].remove(min_number)
 
+        return throw_away
+
     def draw(self):
-        rand_arr = sample(range(100), self.level * self.nr_players)
+        rand_arr = sample(range(1,100), self.level * self.nr_players)
         i = 0
-        print(rand_arr)
+        #print(rand_arr)
         for player_id in self.player_to_numbers:
             self.player_to_numbers[player_id] = rand_arr[i*self.level:(i+1)*self.level]
             i = i+1
